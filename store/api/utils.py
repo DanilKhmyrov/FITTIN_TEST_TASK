@@ -53,10 +53,7 @@ def get_coordinates(address):
     Получает координаты по адресу через Яндекс.Карты API.
     """
     url = "https://geocode-maps.yandex.ru/1.x/"
-    params = {
-        "apikey": settings.YANDEX_API_KEY,
-        "geocode": address,
-        "format": "json"}
+    params = {"apikey": settings.YANDEX_API_KEY, "geocode": address, "format": "json"}
     response = requests.get(url, params=params)
     if response.status_code == 200:
         try:

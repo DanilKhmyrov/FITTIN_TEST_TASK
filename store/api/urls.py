@@ -1,14 +1,8 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
-    AddressCoordinatesAPIView,
-    CartViewSet,
-    CategoryViewSet,
-    OrderAPIView,
-    ProductsAPIView,
-    ProductViewSet,
-)
+from .views import (AddressCoordinatesAPIView, CartViewSet, CategoryViewSet,
+                    OrderAPIView, ProductsAPIView, ProductViewSet)
 
 router_v1 = DefaultRouter()
 
@@ -26,7 +20,7 @@ urlpatterns = [
         name="get_coordinates",
     ),
     path("v1/products/", ProductsAPIView.as_view()),
-    path("v1/order/", OrderAPIView.as_view()),
+    path("v1/order/", OrderAPIView.as_view(), name="order"),
     path(
         "v1/cart/",
         CartViewSet.as_view(

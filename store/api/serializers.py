@@ -45,8 +45,7 @@ class CategoriesSerializer(serializers.ModelSerializer):
     вложенных подкатегорий и родительской категории.
     """
 
-    subcategories = RecursiveIDSerializer(
-        many=True, read_only=True, allow_null=True)
+    subcategories = RecursiveIDSerializer(many=True, read_only=True, allow_null=True)
     parent = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), allow_null=True
     )

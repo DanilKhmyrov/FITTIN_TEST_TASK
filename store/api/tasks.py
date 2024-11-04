@@ -3,8 +3,8 @@ from django.conf import settings
 from yookassa import Configuration
 
 from .models import Cart, Order, OrderItem
-from .utils import (
-    create_payment, send_order_confirmation_email, send_payment_url_email)
+from .utils import (create_payment, send_order_confirmation_email,
+                    send_payment_url_email)
 
 Configuration.account_id = settings.YOOKASSA_SHOP_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -20,8 +20,7 @@ def process_order(user_id):
         if not cart.items.exists():
             return {"error": "Cart is empty."}
 
-        order = Order.objects.create(
-            user_id=user_id, total_price=cart.total_price)
+        order = Order.objects.create(user_id=user_id, total_price=cart.total_price)
 
         for cart_item in cart.items.all():
             OrderItem.objects.create(

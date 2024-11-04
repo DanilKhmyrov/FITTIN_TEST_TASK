@@ -38,8 +38,7 @@ class Product(models.Model):
 
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(
-        upload_to="product_images/", blank=True, null=True)
+    image = models.ImageField(upload_to="product_images/", blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     characteristics = models.JSONField(blank=True, null=True)
     category = models.ForeignKey(
@@ -65,8 +64,7 @@ class AbstractContainer(models.Model):
     Хранит ссылку на пользователя, дату создания и общую стоимость.
     """
 
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="%(class)s")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="%(class)s")
     created_at = models.DateTimeField(default=timezone.now)
     total_price = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True
@@ -132,8 +130,7 @@ class CartItem(AbstractContainerItem):
     Модель для элементов корзины. Содержит продукт и его количество в корзине.
     """
 
-    cart = models.ForeignKey(
-        Cart, on_delete=models.CASCADE, related_name="items")
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name="items")
 
     class Meta(AbstractContainerItem.Meta):
         unique_together = ("cart", "product")

@@ -15,8 +15,7 @@ def calculate_cart_total_price(cart):
     """
     Пересчитывает общую стоимость корзины.
     """
-    total_price = sum(
-        item.product.price * item.quantity for item in cart.items.all())
+    total_price = sum(item.product.price * item.quantity for item in cart.items.all())
     cart.total_price = total_price
     cart.save()
     return total_price
@@ -27,8 +26,7 @@ def add_product_to_cart(cart, product, quantity):
     Добавляет товар в корзину или обновляет количество,
     если товар уже в корзине.
     """
-    cart_item, created = CartItem.objects.get_or_create(
-        cart=cart, product=product)
+    cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
     cart_item.quantity = cart_item.quantity + quantity if not created else quantity
     cart_item.save()
 
