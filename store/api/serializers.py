@@ -11,7 +11,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = "__all__"
 
 
 class CategoryFilterSerializer(serializers.Serializer):
@@ -20,7 +20,8 @@ class CategoryFilterSerializer(serializers.Serializer):
     """
 
     category = serializers.IntegerField(
-        required=False, help_text='ID категории для фильтрации товаров')
+        required=False, help_text="ID категории для фильтрации товаров"
+    )
 
 
 class RecursiveIDSerializer(serializers.Serializer):
@@ -31,9 +32,10 @@ class RecursiveIDSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         return {
-            'id': instance.id,
-            'subcategories': RecursiveIDSerializer(
-                instance.subcategories.all(), many=True).data
+            "id": instance.id,
+            "subcategories": RecursiveIDSerializer(
+                instance.subcategories.all(), many=True
+            ).data,
         }
 
 
@@ -51,12 +53,12 @@ class CategoriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent', 'subcategories']
+        fields = ["id", "name", "parent", "subcategories"]
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        if representation.get('parent') is None:
-            representation.pop('parent')
+        if representation.get("parent") is None:
+            representation.pop("parent")
         return representation
 
 
@@ -65,16 +67,18 @@ class CartItemSerializer(serializers.ModelSerializer):
     Сериализатор для отображения информации о товарах в корзине.
     """
 
-    id = serializers.IntegerField(source='product.id')
-    name = serializers.CharField(source='product.name')
+    id = serializers.IntegerField(source="product.id")
+    name = serializers.CharField(source="product.name")
     price = serializers.DecimalField(
-        source='product.price', max_digits=10, decimal_places=2)
+        source="product.price", max_digits=10, decimal_places=2
+    )
     quantity = serializers.IntegerField(
-        min_value=1, help_text='Количество товара должно быть положительным')
+        min_value=1, help_text="Количество товара должно быть положительным"
+    )
 
     class Meta:
         model = CartItem
-        fields = ['id', 'name', 'price', 'quantity']
+        fields = ["id", "name", "price", "quantity"]
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -82,18 +86,18 @@ class CartSerializer(serializers.ModelSerializer):
     Сериализатор для корзины, с отображением товаров и общей суммы.
     """
 
-    products = CartItemSerializer(source='items', many=True, read_only=True)
+    products = CartItemSerializer(source="items", many=True, read_only=True)
 
     class Meta:
         model = Cart
-        fields = ('products', 'total_price')
+        fields = ("products", "total_price")
 
     def to_representation(self, instance):
         """
         Добавляет корзину в контекст при сериализации.
         """
 
-        self.context['cart'] = instance
+        self.context["cart"] = instance
         return super().to_representation(instance)
 
 
@@ -110,7 +114,7 @@ class POSTCartSerializer(serializers.Serializer):
         try:
             product = Product.objects.get(id=value)
         except Product.DoesNotExist:
-            raise serializers.ValidationError('Продукт с таким ID не найден.')
+            raise serializers.ValidationError("Продукт с таким ID не найден.")
         return product
 
 
@@ -121,7 +125,8 @@ class DestroyCartSerializer(serializers.Serializer):
     """
 
     product = serializers.IntegerField(
-        required=True, help_text='ID товара для удаления из корзины')
+        required=True, help_text="ID товара для удаления из корзины"
+    )
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -136,9 +141,10 @@ class OrderSerializer(serializers.ModelSerializer):
         """
         if value < 0:
             raise serializers.ValidationError(
-                'Общая стоимость заказа не может быть отрицательной.')
+                "Общая стоимость заказа не может быть отрицательной."
+            )
         return value
 
     class Meta:
         model = Order
-        fields = '__all__'
+        fields = "__all__"

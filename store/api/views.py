@@ -1,23 +1,29 @@
-from django.conf import settings
-import requests
-from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet
-from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError
-from drf_yasg.utils import swagger_auto_schema
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import filters, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework import status, filters
+from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
-from .utils import get_coordinates
 from .filters import ProductFilter
-from .tasks import process_order
+from .logic import (
+    add_product_to_cart,
+    get_or_create_user_cart,
+    remove_product_from_cart,
+    update_cart_item_quantity,
+)
 from .models import Cart, Category, Product
-from .logic import (add_product_to_cart, update_cart_item_quantity,
-                    remove_product_from_cart, get_or_create_user_cart)
-from .serializers import (CategoriesSerializer,
-                          CategoryFilterSerializer, DestroyCartSerializer,
-                          CartSerializer,
-                          POSTCartSerializer, ProductSerializer)
+from .serializers import (
+    CartSerializer,
+    CategoriesSerializer,
+    CategoryFilterSerializer,
+    DestroyCartSerializer,
+    POSTCartSerializer,
+    ProductSerializer,
+)
+from .tasks import process_order
+from .utils import get_coordinates
 
 
 class ProductViewSet(ReadOnlyModelViewSet):
@@ -30,8 +36,8 @@ class ProductViewSet(ReadOnlyModelViewSet):
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ProductFilter
-    ordering_fields = ['price']
-    ordering = ['price']
+    ordering_fields = ["price"]
+    ordering = ["price"]
 
 
 class ProductsAPIView(APIView):
@@ -41,10 +47,10 @@ class ProductsAPIView(APIView):
     """
 
     @swagger_auto_schema(
-        operation_id='products_category',
+        operation_id="products_category",
         request_body=CategoryFilterSerializer,
         responses={200: ProductSerializer(many=True)},
-        operation_description='Получение списка товаров по категории',
+        operation_description="Получение списка товаров по категории",
     )
     def post(self, request):
         """
@@ -55,10 +61,13 @@ class ProductsAPIView(APIView):
         serializer = CategoryFilterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        category_id = serializer.validated_data.get('category')
+        category_id = serializer.validated_data.get("category")
 
-        queryset = Product.objects.filter(
-            category_id=category_id) if category_id else Product.objects.all()
+        queryset = (
+            Product.objects.filter(category_id=category_id)
+            if category_id
+            else Product.objects.all()
+        )
 
         product_serializer = ProductSerializer(queryset, many=True)
         return Response(product_serializer.data, status=status.HTTP_200_OK)
@@ -87,11 +96,11 @@ class CartViewSet(GenericViewSet):
         """
         Возвращает соответствующий сериализатор в зависимости от действия.
         """
-        if self.action == 'retrieve':
+        if self.action == "retrieve":
             return CartSerializer
-        elif self.action in ['create', 'update']:
+        elif self.action in ["create", "update"]:
             return POSTCartSerializer
-        elif self.action == 'destroy':
+        elif self.action == "destroy":
             return DestroyCartSerializer
         return super().get_serializer_class()
 
@@ -100,14 +109,14 @@ class CartViewSet(GenericViewSet):
         Возвращает контекст сериализатора с дополнительными данными.
         """
         context = super().get_serializer_context()
-        context['request'] = self.request
+        context["request"] = self.request
         return context
 
     def get_queryset(self):
         """
         Возвращает корзину текущего пользователя.
         """
-        if getattr(self, 'swagger_fake_view', False):
+        if getattr(self, "swagger_fake_view", False):
             return Cart.objects.none()
         return Cart.objects.filter(user=self.request.user)
 
@@ -118,12 +127,14 @@ class CartViewSet(GenericViewSet):
         """
         cart = self.get_queryset().first()
         if not cart:
-            return Response({'detail': 'Cart not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         return cart
 
     @swagger_auto_schema(
-        operation_id='check_cart',
-        operation_description='Просмотр корзины',
+        operation_id="check_cart",
+        operation_description="Просмотр корзины",
     )
     def retrieve(self, request, *args, **kwargs):
         """
@@ -134,10 +145,10 @@ class CartViewSet(GenericViewSet):
         return Response(serializer.data)
 
     @swagger_auto_schema(
-        operation_id='add_product',
+        operation_id="add_product",
         request_body=POSTCartSerializer,
         responses={201: CartSerializer},
-        operation_description='Добавление товара в корзину',
+        operation_description="Добавление товара в корзину",
     )
     def create(self, request, *args, **kwargs):
         """
@@ -147,25 +158,22 @@ class CartViewSet(GenericViewSet):
         post_serializer = self.get_serializer(data=request.data)
         post_serializer.is_valid(raise_exception=True)
 
-        product = post_serializer.validated_data['product']
-        quantity = post_serializer.validated_data['quantity']
+        product = post_serializer.validated_data["product"]
+        quantity = post_serializer.validated_data["quantity"]
 
         add_product_to_cart(cart, product, quantity)
 
         get_serializer = CartSerializer(
             cart, context=self.get_serializer_context())
         return Response(
-            {
-                'detail': 'Product added to cart.',
-                'cart': get_serializer.data
-            },
-            status=status.HTTP_201_CREATED
+            {"detail": "Product added to cart.", "cart": get_serializer.data},
+            status=status.HTTP_201_CREATED,
         )
 
     @swagger_auto_schema(
-        operation_id='update_product',
+        operation_id="update_product",
         responses={200: CartSerializer},
-        operation_description='Изменение товара в корзине',
+        operation_description="Изменение товара в корзине",
     )
     def update(self, request, *args, **kwargs):
         """
@@ -176,23 +184,23 @@ class CartViewSet(GenericViewSet):
         serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        product = serializer.validated_data.get('product')
-        quantity = serializer.validated_data.get('quantity')
+        product = serializer.validated_data.get("product")
+        quantity = serializer.validated_data.get("quantity")
 
         try:
             update_cart_item_quantity(cart, product, quantity)
         except ValueError as e:
             return Response(
-                {'detail': str(e)}, status=status.HTTP_404_NOT_FOUND)
+                {"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
 
         get_serializer = CartSerializer(
             cart, context=self.get_serializer_context())
         return Response(get_serializer.data)
 
     @swagger_auto_schema(
-        operation_id='destroy_product',
+        operation_id="destroy_product",
         request_body=DestroyCartSerializer,
-        operation_description='Удаление товара из корзины',
+        operation_description="Удаление товара из корзины",
     )
     def destroy(self, request, *args, **kwargs):
         """
@@ -203,7 +211,7 @@ class CartViewSet(GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        product_id = serializer.validated_data.get('product')
+        product_id = serializer.validated_data.get("product")
 
         try:
             remove_product_from_cart(cart, product_id)
@@ -229,10 +237,11 @@ class OrderAPIView(APIView):
         process_order.delay(request.user.id)
 
         return Response(
-            {'detail': 'Order is being processed. '
-             'You will receive a notification when it is complete.'}
-
-            status=status.HTTP_202_ACCEPTED
+            {
+                "detail": "Order is being processed. "
+                "You will receive a notification when it is complete."
+            },
+            status=status.HTTP_202_ACCEPTED,
         )
 
 
@@ -247,14 +256,15 @@ class AddressCoordinatesAPIView(APIView):
         POST /get-coordinates — получение координат по адресу.
         Ожидает адрес в данных запроса.
         """
-        address = request.data.get('address')
+        address = request.data.get("address")
         if not address:
             return Response(
-                {'error': 'Address is required'},
-                status=status.HTTP_400_BAD_REQUEST)
+                {"error": "Address is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         coordinates = get_coordinates(address)
-        if 'error' in coordinates:
+        if "error" in coordinates:
             return Response(coordinates, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(coordinates, status=status.HTTP_200_OK)

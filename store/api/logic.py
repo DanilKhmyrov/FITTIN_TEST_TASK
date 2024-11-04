@@ -15,8 +15,8 @@ def calculate_cart_total_price(cart):
     """
     Пересчитывает общую стоимость корзины.
     """
-    total_price = sum(item.product.price *
-                      item.quantity for item in cart.items.all())
+    total_price = sum(
+        item.product.price * item.quantity for item in cart.items.all())
     cart.total_price = total_price
     cart.save()
     return total_price
@@ -24,7 +24,8 @@ def calculate_cart_total_price(cart):
 
 def add_product_to_cart(cart, product, quantity):
     """
-    Добавляет товар в корзину или обновляет количество, если товар уже в корзине.
+    Добавляет товар в корзину или обновляет количество,
+    если товар уже в корзине.
     """
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart, product=product)
@@ -43,7 +44,7 @@ def update_cart_item_quantity(cart, product, quantity):
         cart_item.quantity = quantity
         cart_item.save()
     except CartItem.DoesNotExist:
-        raise ValueError('Product not found in cart')
+        raise ValueError("Product not found in cart")
 
     calculate_cart_total_price(cart)
 
@@ -56,6 +57,6 @@ def remove_product_from_cart(cart, product_id):
         cart_item = CartItem.objects.get(cart=cart, product_id=product_id)
         cart_item.delete()
     except CartItem.DoesNotExist:
-        raise ValidationError({'detail': 'Product not found in cart'})
+        raise ValidationError({"detail": "Product not found in cart"})
 
     calculate_cart_total_price(cart)
