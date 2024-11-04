@@ -1,0 +1,58 @@
+version: "3.8"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  django:
+    build:
+      context: ./store
+      dockerfile: Dockerfile
+    container_name: django_app
+    command: sh -c "PYTHONPATH=/app gunicorn store.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - ./store:/app
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build:
+      context: ./store
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    command: celery -A store worker -l info
+    volumes:
+      - ./store:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - django
+
+  db:
+    image: postgres:13
+    container_name: postgres_db
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
