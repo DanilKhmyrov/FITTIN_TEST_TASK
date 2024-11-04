@@ -1,5 +1,6 @@
 from celery import shared_task
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from yookassa import Configuration
 
 from .models import Cart, Order, OrderItem
@@ -20,7 +21,8 @@ def process_order(user_id):
         if not cart.items.exists():
             return {"error": "Cart is empty."}
 
-        order = Order.objects.create(user_id=user_id, total_price=cart.total_price)
+        order = Order.objects.create(
+            user_id=user_id, total_price=cart.total_price)
 
         for cart_item in cart.items.all():
             OrderItem.objects.create(
@@ -29,15 +31,19 @@ def process_order(user_id):
                 quantity=cart_item.quantity,
             )
 
-        payment = create_payment(order)
+        try:
+            payment = create_payment(order)
+            confirmation_url = payment.get(
+                "confirmation", {}).get("confirmation_url")
+            if not confirmation_url:
+                raise ValueError("No confirmation URL in payment response.")
+        except Exception as e:
+            return {"error": f"Failed to create payment: {e}"}
 
         cart.items.all().delete()
         cart.total_price = 0
         cart.save()
-        try:
-            confirmation_url = payment.confirmation.confirmation_url
-        except Exception as e:
-            return {"error": f"Failed to create payment: {e}"}
+
         send_order_confirmation_email(order.user, order)
         send_payment_url_email(order.user, confirmation_url)
 
@@ -45,5 +51,7 @@ def process_order(user_id):
 
     except Cart.DoesNotExist:
         return {"error": "Cart not found."}
+    except ObjectDoesNotExist as e:
+        return {"error": str(e)}
     except Exception as e:
         return {"error": str(e)}
